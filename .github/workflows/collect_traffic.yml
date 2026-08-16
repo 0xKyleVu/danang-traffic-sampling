@@ -1,0 +1,47 @@
+name: Collect traffic samples
+
+on:
+  schedule:
+    # Moi 30 phut, lech khoi dau gio (phut 7 va 37) vi GitHub thuong bi tre
+    # khi qua nhieu workflow cung chay vao dau gio tron.
+    - cron: "7,37 * * * *"
+  workflow_dispatch:        # cho phep bam chay tay de test
+
+permissions:
+  contents: write           # can quyen ghi de commit CSV nguoc lai repo
+
+concurrency:
+  group: traffic-sampling   # tranh 2 lan chay chong nhau gay xung dot git
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Cai dependency
+        run: pip install requests
+
+      - name: Lay mau giao thong
+        env:
+          TOMTOM_API_KEY: ${{ secrets.TOMTOM_API_KEY }}
+        run: python collect_traffic.py
+
+      - name: Commit ket qua
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add traffic_samples.csv
+          if git diff --staged --quiet; then
+            echo "Khong co du lieu moi"
+            exit 0
+          fi
+          git commit -m "traffic sample $(date -u +%Y-%m-%dT%H:%MZ)"
+          # rebase phong truong hop co commit khac trong luc chay
+          git pull --rebase --autostash origin ${{ github.ref_name }}
+          git push

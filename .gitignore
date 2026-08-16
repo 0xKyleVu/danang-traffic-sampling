@@ -1,0 +1,9 @@
+# KHONG commit API key
+.env
+
+# Log chay nen (chi dung khi chay tren may ca nhan)
+run_log.txt
+
+# Python
+__pycache__/
+*.pyc
