@@ -22,15 +22,6 @@ flood data share the same spatial index — so a routing model can reason about
 road segments that are *both* flood-prone *and* congested, which is where
 proactive rerouting has the most value.
 
-## Why TomTom Flow Segment instead of Google Directions / Distance Matrix
-
-| Criterion | Google Directions + Distance Matrix | TomTom Flow Segment |
-|---|---|---|
-| **Measurement** | Travel time between point pairs; congestion must be *inferred* from `duration_in_traffic / duration` | Returns `currentSpeed` and `freeFlowSpeed` for the road segment directly — a **direct measurement**, not an inference |
-| **Request complexity** | 1 request per origin–destination pair → O(n²) to cover a network | 1 request per point → O(n). 32 points = 32 requests |
-| **Cost** | Distance Matrix billed per element; expensive for continuous sampling | Free tier, 2,500 requests/day, no credit card required |
-| **Reproducibility** | Manual | Every sampling round is a timestamped git commit; the full collection history is auditable and the pipeline can be re-run by anyone |
-
 ## Method
 
 1. Read the 32 recurring flood locations from `flood_hotspots.csv`
@@ -85,37 +76,6 @@ One row = one location, sampled at one point in time.
 | `road_closure` | bool | Whether the segment is reported closed |
 
 ---
-
-## Notes and limitations
-
-1. **This measures speed, not vehicle volume.** `congestion_ratio` is a speed-
-   based congestion index, not a vehicle count or density. Under traffic flow
-   theory (`flow = density × speed`) volume cannot be derived from speed alone.
-   For routing purposes speed is arguably the more directly useful quantity —
-   it *is* the traversal cost of an edge — but any claim about vehicle counts
-   would require a different source (TomTom Traffic Stats / Historical Traffic
-   Volumes, or vehicle counting from public traffic cameras).
-
-2. **No open government traffic data was available.** The Da Nang Open Data
-   Portal (`congdulieu.vn`) was checked and contains no traffic volume
-   datasets; most of its published data ends around 2023. This is why a
-   commercial API was used.
-
-3. **Some locations are slow even at night.** A handful of segments show
-   `congestion_ratio < 0.8` at 2–4 AM. This most likely reflects a persistent
-   property of the segment (narrow road, works, low speed limit) rather than
-   demand-driven congestion, and should be treated as a baseline offset rather
-   than as congestion.
-
-4. **Coordinates are cluster centroids, not exact road geometry.** Flood
-   reports within 120 m were merged into clusters upstream; the centroid is
-   sent to the API, and TomTom snaps it to the nearest segment. For short
-   `kiệt`/alley entries the snapped segment may be the adjoining main road.
-
-5. **Sampling depends on GitHub's scheduler.** Scheduled workflows can be
-   delayed by several minutes under load, so intervals are not exactly 30
-   minutes. Every row records its own actual sampling timestamp, so analyses
-   should group by `hour_vn` rather than assume a fixed cadence.
 
 ## Repository contents
 
